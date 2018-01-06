@@ -1,0 +1,14 @@
+[
+    {
+        "id": "node1",
+        "exePath": "./test/dev/app_node.js",
+        "engine": "node",
+        "args": []
+    },
+    {
+        "id": "python1",
+        "exePath": "./test/dev/app_node.js",
+        "engine": "python",
+        "args": []
+    }
+]
