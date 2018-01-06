@@ -17,10 +17,12 @@ function onReady(pm2Connect) {
 
     pm2Connect.listAll()
     .then(listRooms => {
+        console.log("Running...", listRooms)
         return pm2Connect.cleanUp()
     })
     .then(_ => {
+        console.log("Kill All complete .. goodbye")
         return pm2Connect.disconnect()
     })
-    
+
 }

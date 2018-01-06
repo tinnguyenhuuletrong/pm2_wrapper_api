@@ -86,10 +86,10 @@ Pm2Api.prototype.listAll = function () {
             
             // trim data
             const resData = (data || []).map(itm => {
-                
                 return {
                     pid: itm.pid,
                     name: itm.name,
+                    pm2id: itm.pm2_env.pm_id,
                     exec_interpreter: itm.pm2_env.exec_interpreter,
                     up_time: itm.pm2_env.pm_uptime,
                     create_at: itm.pm2_env.created_at,
