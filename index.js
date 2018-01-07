@@ -1,24 +1,57 @@
-const Pm2API = require("./libs/pm2api")
-const mockupData = require("./test/dev/mockup/data1.json");
+const fs = require('fs')
+const os = require('os')
+const Pm2API = require('./libs/pm2api')
+const express = require('express')
+const bodyParser = require('body-parser')
+const app = express()
 
-const pm2Connect = new Pm2API({
-    onReady: onReady
+app.use(bodyParser.json())
+
+
+const pm2Connect = new Pm2API()
+
+let RUNNING_PORT = process.env.RUNNING_PORT || 3001
+
+app.get('/', (req, res) => {
+    res.json({
+        name: 'RoomSpawner',
+        hostname: os.hostname(),
+        port: RUNNING_PORT
+    })
 })
 
-function onReady(pm2Connect) {
+app.get('/clean', (req, res) => {
     pm2Connect.cleanUp()
-        .then(info => {
-            return pm2Connect.spawnList(mockupData);
-        })
-        .then(info => {
-            return pm2Connect.listAll({delayTime: 2000});
-        })
-        .then(allProcess => {
-            console.log(allProcess);
-            pm2Connect.disconnect();
+        .then(_ => {
+            res.json({
+                result: "ok"
+            })
         })
         .catch(err => {
-            console.log("Error", err)
-            pm2Connect.disconnect();
+            res.json({
+                err: err
+            })
         })
-}
+})
+
+app.get('/list', (req, res) => {
+    pm2Connect.listAll()
+        .then(processList => res.json(processList))
+        .catch(err => res.json({ err: err }));
+})
+
+app.get('/log/:name', (req, res) =>{
+    var processName = req.params.name;
+    pm2Connect.getLogInfo(processName)
+        .then(logInfo => {
+            fs.createReadStream(logInfo.log).pipe(res);
+        })
+        .catch(err => res.json({ err: err }));
+})
+
+app.post('/spawn', (req, res) => {
+    const info = req.body;
+    res.json(info);
+})
+
+app.listen(RUNNING_PORT, () => console.log(`Example app listening on port ${RUNNING_PORT}!`))

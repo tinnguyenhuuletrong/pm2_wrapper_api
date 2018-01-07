@@ -2,7 +2,7 @@ var pm2 = require('pm2');
 var process = require('process');
 var path = require('path');
 
-const Pm2Api = function (options) {
+const Pm2Api = function (options = {}) {
     this.options = options
     this._isConnected = false;
 
@@ -77,6 +77,25 @@ Pm2Api.prototype.removeProcess = function (name) {
     })
 }
 
+Pm2Api.prototype.getLogInfo = function (name) {
+    return new Promise((resolve, reject) => {
+        if (!this._isConnected)
+            return reject("Not connected");
+
+        pm2.describe(name, (err, processInfo) => {
+            if(err !=null || processInfo == null || processInfo[0] == null ) throw(err);
+
+            processInfo = processInfo[0];
+            
+            const pathInfo = {
+                log: processInfo.pm2_env.pm_out_log_path
+            }
+
+            resolve(pathInfo)
+        })
+    });
+}
+
 Pm2Api.prototype.listAll = function (options = {}) {
     return new Promise((resolve, reject) => {
         if (!this._isConnected)
@@ -134,7 +153,8 @@ Pm2Api.prototype.spawn = function (info) {
             script: script,
             args: args,
             interpreter: engine,
-            cwd: cwd
+            cwd: cwd,
+            mergeLogs: true
         }, (err, data) => {
             if (err != null) throw err;
             const processInfo = data[0];
