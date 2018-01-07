@@ -49,9 +49,25 @@ app.get('/log/:name', (req, res) =>{
         .catch(err => res.json({ err: err }));
 })
 
-app.post('/spawn', (req, res) => {
+app.post('/updateProcess', (req, res) => {
     const info = req.body;
-    res.json(info);
+
+    const needCleanup = info.cleanUp ? true : false;
+    const processInfos = info.process || [];
+
+    const beginJob = needCleanup ? pm2Connect.cleanUp() : Promise.resolve(1);
+
+    beginJob
+        .then(res => {
+            return pm2Connect.spawnList(processInfos)
+        })
+        .then(res => {
+            return pm2Connect.listAll()
+        })
+        .then(processList => res.json(processList))
+        .catch(err => res.json({ err: err }));
+
 })
+
 
 app.listen(RUNNING_PORT, () => console.log(`Example app listening on port ${RUNNING_PORT}!`))
