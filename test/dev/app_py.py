@@ -9,6 +9,7 @@ class KodeFunHTTPRequestHandler(BaseHTTPRequestHandler):
   
   #handle GET command
   def do_GET(self):
+    print("Aaa")
     self.send_response(200)
     #send header first
     self.send_header('Content-type','text-html')
@@ -21,14 +22,17 @@ def run():
   print('http server is starting...')
 
   #ip and port of servr
-  #by default http server port is 9999
-  PORT = 9999
-  if len(sys.argv) >= 2:
-    PORT = sys.argv[1]
+  #by default http server port is 5000
+  PORT = 5000
+  i = 0
+  while i < len(sys.argv):
+    if sys.argv[i] == '-p':
+      PORT = int(sys.argv[i+1])
+    i+=1
 
   server_address = ('127.0.0.1', int(PORT))
   httpd = HTTPServer(server_address, KodeFunHTTPRequestHandler)
-  print('http server is running...', PORT)
+  print('http server is running...' + str(PORT))
   httpd.serve_forever()
   
 if __name__ == '__main__':

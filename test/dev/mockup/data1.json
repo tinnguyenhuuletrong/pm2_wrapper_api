@@ -1,14 +1,14 @@
 [
     {
         "id": "node1",
-        "exePath": "./test/dev/app_node.js",
+        "script": "./test/dev/app_node.js",
         "engine": "node",
-        "args": []
+        "args": ["-p", "5000"]
     },
     {
         "id": "python1",
-        "exePath": "./test/dev/app_node.js",
+        "script": "./test/dev/app_py.py",
         "engine": "python",
-        "args": []
+        "args": ["-p", "7000"]
     }
 ]

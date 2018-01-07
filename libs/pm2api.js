@@ -1,11 +1,13 @@
 var pm2 = require('pm2');
+var process = require('process');
+var path = require('path');
 
 const Pm2Api = function (options) {
     this.options = options
     this._isConnected = false;
-    
+
     pm2.connect((err) => {
-        if(err != null) {
+        if (err != null) {
             const onError = this.options.onError || function () { }
             console.log('[pm2] connecting error ', err)
             return onError(err);
@@ -26,9 +28,9 @@ Pm2Api.prototype.disconnect = function () {
 
 Pm2Api.prototype.cleanUp = function () {
     return new Promise((resolve, reject) => {
-        if (!this._isConnected) 
+        if (!this._isConnected)
             return reject("Not connected");
-        
+
         // query all process
         this.listAll()
             .then(listProcess => {
@@ -46,7 +48,7 @@ Pm2Api.prototype.cleanUp = function () {
                         reject(err)
                     })
 
-                
+
             })
             .catch(err => {
                 console.log('[pm2] error. cleanUp step 1')
@@ -57,48 +59,102 @@ Pm2Api.prototype.cleanUp = function () {
 
 Pm2Api.prototype.removeProcess = function (name) {
     return new Promise((resolve, reject) => {
-        if (!this._isConnected) 
+        if (!this._isConnected)
             return reject("Not connected");
+
+        console.log("[pm2] kill process: ", name);
 
         // delete process
         pm2.delete(name, (err, data) => {
-            if(err != null){
+            if (err != null) {
                 console.log('[pm2] error' + data)
                 return reject(err)
             }
 
             resolve(data)
-                
+
         })
     })
 }
 
-Pm2Api.prototype.listAll = function () {
+Pm2Api.prototype.listAll = function (options = {}) {
     return new Promise((resolve, reject) => {
-        if (!this._isConnected) 
+        if (!this._isConnected)
             return reject("Not connected");
 
-        pm2.list((err, data) => {
-            if (err != null) {
-                console.log('[pm2] error' + data)
-                return reject(err)
-            }
-            
-            // trim data
-            const resData = (data || []).map(itm => {
-                return {
-                    pid: itm.pid,
-                    name: itm.name,
-                    pm2id: itm.pm2_env.pm_id,
-                    exec_interpreter: itm.pm2_env.exec_interpreter,
-                    up_time: itm.pm2_env.pm_uptime,
-                    create_at: itm.pm2_env.created_at,
-                    restart_time: itm.pm2_env.restart_time,
-                }
-            })
+        const delayTime = options.delayTime || 0
 
-            resolve(resData)
+        setTimeout(() => {
+            pm2.list((err, data) => {
+                if (err != null) {
+                    console.log('[pm2] error' + data)
+                    return reject(err)
+                }
+
+                // trim data. Exclude myself!
+                const resData = (data || []).map(itm => {
+                    return {
+                        pid: itm.pid,
+                        name: itm.name,
+                        status: itm.pm2_env.status,
+                        pm2id: itm.pm2_env.pm_id,
+                        exec_interpreter: itm.pm2_env.exec_interpreter,
+                        up_time: itm.pm2_env.pm_uptime,
+                        create_at: itm.pm2_env.created_at,
+                        restart_time: itm.pm2_env.restart_time,
+                    }
+                })
+                    .filter(itm => {
+                        return itm.pid != process.pid
+                    });
+
+                resolve(resData)
+            })
+        }, delayTime);
+    })
+}
+
+Pm2Api.prototype.spawn = function (info) {
+    const name = info.id;
+    const script = info.script;
+    const engine = info.engine;
+    const args = info.args || [];
+    const cwd = info.cwd || path.dirname(script);
+
+    console.log("[pm2] start process: ", name, script, engine, args, cwd);
+    return new Promise((resolve, reject) => {
+        if (!this._isConnected)
+            return reject("Not connected");
+
+        if ([name, script, engine].indexOf(null) != -1)
+            return reject("Missing arguments");
+
+        pm2.start({
+            name: name,
+            script: script,
+            args: args,
+            interpreter: engine,
+            cwd: cwd
+        }, (err, data) => {
+            if (err != null) throw err;
+            const processInfo = data[0];
+            if (processInfo == null) throw new Error("Can't start process " + JSON.stringify(info));
+
+            resolve(processInfo);
         })
+    });
+}
+
+Pm2Api.prototype.spawnList = function (listProcessInfo) {
+    return new Promise((resolve, reject) => {
+        if (!this._isConnected)
+            return reject("Not connected");
+
+        const jobs = listProcessInfo.map(itm => this.spawn(itm));
+
+        Promise.all(jobs)
+            .then(res => resolve(res))
+            .catch(err => reject(err));
     })
 }
 
